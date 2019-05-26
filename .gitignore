@@ -1,0 +1,9 @@
+src/github/*
+src/golang.org/*
+cloud-deployment/*
+dbsetup.*
+configurations/*
+ssl-certs/*
+k8s/*
+env.sh
+.dockerignore

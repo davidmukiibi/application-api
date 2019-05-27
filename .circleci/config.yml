@@ -39,7 +39,8 @@ build_docker_image: &build_docker_image
   run:
     name: Building Docker Image
     command: |
-      docker build --cache-from ${DOCKER_IMAGE_TAG} -t ${DOCKER_IMAGE_TAG} .
+      # docker build --cache-from "${DOCKER_IMAGE_TAG}" -t "${DOCKER_IMAGE_TAG}" .
+      docker build --cache-from gcr.io/kubernetes-practice-us/application-api:$CIRCLE_SHA1 -t gcr.io/kubernetes-practice-us/application-api:$CIRCLE_SHA1 .
       echo "$SERVICE_ACCOUNT_KEY" > key.json
       docker login -u _json_key --password-stdin https://gcr.io < key.json
 

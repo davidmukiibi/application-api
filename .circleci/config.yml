@@ -26,7 +26,7 @@ default: &defaults
 
   environment:
     TEST_REPORTS: /tmp/test-reports
-    DOCKER_IMAGE_TAG: docker push gcr.io/application-api:$(git rev-parse --short HEAD)
+    DOCKER_IMAGE_TAG: gcr.io/application-api:$(git rev-parse --short HEAD)
 
 
 run_tests: &run_tests

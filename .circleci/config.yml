@@ -1,0 +1,128 @@
+default: &defaults
+  parallelism: 1
+  docker:
+    - image: circleci/golang:1.9
+      working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
+      environment:
+        DB_HOST: localhost
+        DB_DATABASE: test_assessmentdb
+        DB_USER: test_strange
+        DB_PASS: drstrange
+        SSL_MODE: disable
+        DB_TYPE: postgres
+        SECRET: some_random_secret_is_not_a_secret
+      # environment:
+      #   BUNDLE_JOBS: 3
+
+    - image: circleci/postgres
+      environment:
+        DB_HOST: localhost
+        DB_DATABASE: test_assessmentdb
+        DB_USER: test_strange
+        DB_PASS: drstrange
+        SSL_MODE: disable
+        DB_TYPE: postgres
+        SECRET: some_random_secret_is_not_a_secret
+
+
+  environment:
+    TEST_REPORTS: /tmp/test-reports
+    DOCKER_IMAGE_TAG: docker push gcr.io/application-api:$(git rev-parse --short HEAD)
+
+
+run_tests: &run_tests
+  run:
+    name: Which Bundler?
+    command: |
+      test runs here
+
+build_docker_image: &build_docker_image
+  run:
+    name: Building Docker Image
+    command: |
+      docker build --cache-from "${DOCKER_IMAGE_TAG}" -t "${DOCKER_IMAGE_TAG}" .
+      echo "$SERVICE_ACCOUNT_KEY" > key.json
+      docker login -u _json_key --password-stdin https://gcr.io < key.json
+
+push_docker_image_to_gcr: &push_docker_image_to_gcr
+  run:
+    name: Pushing Docker Image To GCR
+    command: |
+      docker push ${DOCKER_IMAGE_TAG}
+
+update_k8s_deployment: &update_k8s_deployment
+  run:
+    name: Updating Kubernetes Deployment
+    command: |
+      apt-get update && apt-get install lsb-core curl sudo -y
+      curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+      chmod +x ./kubectl
+      mv ./kubectl /usr/local/bin/kubectl
+      export CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)"
+      echo "deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+      curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+      sudo apt-get update && sudo apt-get install google-cloud-sdk -y
+      echo $SERVICE_ACCOUNT_KEY | gcloud auth activate-service-account --key-file=-
+      gcloud --quiet config set project $PROJECT_ID
+      gcloud --quiet config set compute/zone us-east1-b
+      gcloud container clusters get-credentials $CLUSTER --zone us-east1-b --project $PROJECT_ID
+      kubectl set image deployment/backend backend=${DOCKER_IMAGE_TAG} --namespace default
+
+version: 2
+jobs:
+  build_with_docker:
+    <<: *defaults
+    steps:
+      - checkout
+      - setup_remote_docker
+      - *build_docker_image
+      - *push_docker_image_to_gcr
+
+  update_k8s:
+    <<: *defaults
+    steps:
+      - *update_k8s_deployment
+
+workflows:
+  version: 2
+  build-and-deploy:
+    jobs:
+      - build_with_docker
+      - update_k8s:
+          requires:
+            - build_with_docker
+
+
+
+
+
+
+
+
+
+# # Golang CircleCI 2.0 configuration file
+# #
+# # Check https://circleci.com/docs/2.0/language-go/ for more details
+# version: 2
+# jobs:
+#   build:
+#     docker:
+#       # specify the version
+#       - image: circleci/golang:1.9
+
+#       # Specify service dependencies here if necessary
+#       # CircleCI maintains a library of pre-built images
+#       # documented at https://circleci.com/docs/2.0/circleci-images/
+#       # - image: circleci/postgres:9.4
+
+#     #### TEMPLATE_NOTE: go expects specific checkout path representing url
+#     #### expecting it in the form of
+#     ####   /go/src/github.com/circleci/go-tool
+#     ####   /go/src/bitbucket.org/circleci/go-tool
+#     working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
+#     steps:
+#       - checkout
+
+#       # specify any bash command here prefixed with `run: `
+#       - run: go get -v -t -d ./...
+#       - run: go test -v ./...

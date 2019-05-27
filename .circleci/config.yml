@@ -24,7 +24,6 @@ default: &defaults
         DB_TYPE: postgres
         SECRET: some_random_secret_is_not_a_secret
 
-
   environment:
     TEST_REPORTS: /tmp/test-reports
     DOCKER_IMAGE_TAG: docker push gcr.io/application-api:$(git rev-parse --short HEAD)

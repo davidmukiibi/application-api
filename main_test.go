@@ -33,10 +33,12 @@ func BenchmarkSlice(b *testing.B) {
 //                                 Tests
 // ========================================================================
 
+// testing healthcheck endpoint
 func TestDefault(t *testing.T) {
 	fmt.Println(assert.HTTPSuccess(t, controllers.Default, "GET", "localhost/", nil))
 }
 
+// testing user create endpoint
 func TestCreateEndPoint(t *testing.T) {
 	for _, testCase := range testCases {
 		q := url.Values{}
